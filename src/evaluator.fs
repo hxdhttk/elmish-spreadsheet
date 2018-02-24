@@ -44,7 +44,7 @@ let parse input = run equation input
 // EVALUATOR
 // ----------------------------------------------------------------------------
 
-let opSome f (lhs: 'a option) (rhs: 'a option) : 'a option =
+let binaryOpSome f (lhs: 'a option) (rhs: 'a option) : 'a option =
     match lhs, rhs with
     | Some(l), Some(r) -> Some(f l r)
     | _ -> None
@@ -59,10 +59,10 @@ let rec evaluate (cells: Map<Position, string>) (cellRefs: Set<Position>) expr =
       // Evaluate left and right recursively and then 
       // add/subtract/etc. them depending on the value of `op`
       match op with
-      | '+' -> opSome (+) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
-      | '-' -> opSome (-) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
-      | '*' -> opSome (*) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
-      | '/' -> opSome (/) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '+' -> binaryOpSome (+) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '-' -> binaryOpSome (-) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '*' -> binaryOpSome (*) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '/' -> binaryOpSome (/) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
       | _ -> None
 
   | Reference pos -> 

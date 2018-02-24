@@ -145,7 +145,9 @@ let renderCell trigger pos state =
       | Some value ->
         let expressionOpt = parse value
         match expressionOpt with
-        | Some expression -> renderView trigger pos (evaluate state.Cells (set [pos]) expression |> Option.map string |> Option.defaultValue "#ERR")
+        | Some expression -> renderView trigger pos (evaluate state.Cells (set [pos]) expression 
+                                                     |> Option.map string 
+                                                     |> Option.defaultValue "#ERR")
         | None -> renderView trigger pos value 
       | None -> renderView trigger pos ""
   | None -> let value = valueOpt |> Option.defaultValue ""
