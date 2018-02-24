@@ -44,22 +44,40 @@ let parse input = run equation input
 // EVALUATOR
 // ----------------------------------------------------------------------------
 
-let rec evaluate (cells:Map<Position, string>) expr = 
+let opSome f (lhs: 'a option) (rhs: 'a option) : 'a option =
+    match lhs, rhs with
+    | Some(l), Some(r) -> Some(f l r)
+    | _ -> None
+
+let rec evaluate (cells: Map<Position, string>) (cellRefs: Set<Position>) expr = 
   match expr with
   | Number num -> 
-      // TODO: Return the evluated number!
-      1 
+      // Return the evluated number!
+      Some num
 
   | Binary(l, op, r) -> 
-      // TODO: Evaluate left and right recursively and then 
+      // Evaluate left and right recursively and then 
       // add/subtract/etc. them depending on the value of `op`
-      2
+      match op with
+      | '+' -> opSome (+) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '-' -> opSome (-) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '*' -> opSome (*) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | '/' -> opSome (/) (evaluate cells cellRefs l) (evaluate cells cellRefs r)
+      | _ -> None
 
   | Reference pos -> 
-      // TODO: We need to evaluate value at `pos`. To do this,
+      // We need to evaluate value at `pos`. To do this,
       // get the expression in `cells` at `pos`, parse it and
       // call `evaluate` recursively to evaluate it. If the
       // `parse` function returns `None` then start by returning
       // -1 - we will fix this in the next step.
       // (This is harder than the two above cases!)
-      0
+      match cellRefs |> Set.contains pos with
+      | true -> None
+      | false -> let valueOpt = cells |> Map.tryFind pos
+                 match valueOpt with
+                 | Some value -> let expressionOpt = parse value
+                                 match expressionOpt with
+                                 | Some expression -> evaluate cells (cellRefs |> Set.add pos) expression
+                                 | None -> None
+                 | None -> None

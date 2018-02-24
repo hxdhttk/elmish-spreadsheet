@@ -97,7 +97,7 @@ type Event =
 type State =
   { Rows : int list
     Cols : char list
-    //Active : option<Position> 
+    Active : option<Position> 
     Cells : Map<Position, string> }
 
 // ----------------------------------------------------------------------------
@@ -106,9 +106,9 @@ type State =
 
 let update state = function
   | StartEdit(pos) -> 
-      state 
+      { state with Active = Some pos }
   | FinishEdit ->
-      state 
+      { state with Active = None }
   | UpdateValue(pos, value) ->
       { state with Cells = Map.add pos value state.Cells }
 
@@ -126,16 +126,30 @@ let renderEditor trigger pos value =
 
 let renderView trigger pos value = 
   h?td 
-    [ "style" => "background:white"; 
-      "onclick" =!> fun _ -> trigger(StartEdit(pos)) ] 
+    [ if value = "#ERR" then 
+        yield "style" => "background:red"
+      else
+        yield "style" => "background:white"
+      yield "onclick" =!> fun _ -> trigger(StartEdit(pos)) ] 
     [ text value ]
 
 let renderCell trigger pos state =
-  let value = Map.tryFind pos state.Cells |> Option.defaultValue ""
-  if pos = ('A', 1) then
-    renderEditor trigger pos value
-  else
-    renderView trigger pos value
+  let valueOpt = Map.tryFind pos state.Cells
+  match state.Active with
+  | Some activePos -> 
+    if activePos = pos then
+      let value = valueOpt |> Option.defaultValue ""
+      renderEditor trigger activePos value
+    else
+      match valueOpt with
+      | Some value ->
+        let expressionOpt = parse value
+        match expressionOpt with
+        | Some expression -> renderView trigger pos (evaluate state.Cells (set [pos]) expression |> Option.map string |> Option.defaultValue "#ERR")
+        | None -> renderView trigger pos value 
+      | None -> renderView trigger pos ""
+  | None -> let value = valueOpt |> Option.defaultValue ""
+            renderView trigger pos value
 
 let renderSheet trigger state =
   let cols = state.Cols
@@ -143,20 +157,16 @@ let renderSheet trigger state =
   h?table [] [
     h?tr [] [
       yield h?th [] []
-      yield h?th [] [ text "A" ]
-      yield h?th [] [ text "B" ]
+      for col in cols do
+        yield h?th [] [text (string col)]
     ]
     h?tbody [] [
-      h?tr [] [
-        yield h?th [] [ text "1" ]
-        yield renderCell trigger ('A', 1) state 
-        yield renderCell trigger ('B', 1) state 
-      ]
-      h?tr [] [
-        yield h?th [] [ text "2" ]
-        yield renderCell trigger ('A', 2) state 
-        yield renderCell trigger ('B', 2) state 
-      ]
+      for row in rows do
+        yield h?tr [] [
+          yield h?th [] [text (string row)]
+          for col in cols do
+            yield renderCell trigger (col, row) state
+        ]
     ]
   ]
 
@@ -167,6 +177,7 @@ let renderSheet trigger state =
 let initial = 
   { Cols = ['A' .. 'T']
     Rows = [1 .. 20]
+    Active = None
     Cells = Map.empty }
 
 app "main" initial renderSheet update
